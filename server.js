@@ -11,9 +11,9 @@ const projectId = 'static-retina-192310';
 const client = new speech.SpeechClient();
 
 // The audio file's encoding, sample rate in hertz, and BCP-47 language code
-const audio = {
-  content: audioBytes,
-};
+// const audio = {
+//   content: audioBytes,
+// };
 
 const config = {
   encoding: 'LINEAR16',
@@ -21,10 +21,10 @@ const config = {
   languageCode: 'en-US',
 };
 
-const request = {
-  audio: audio,
-  config: config,
-};
+// const request = {
+//   audio: audio,
+//   config: config,
+// };
 
 /* TEST FOR GOOGLE SPEECH API */
 // // The name of the audio file to transcribe
@@ -62,7 +62,9 @@ server.get('/test', function (req, res) {
 server.use(express.static('audio'));
 
 /* WEBSOCKET CONFIG */
+var base64Buffer = "";
 var connectCounter = 0;
+
 io.on('connection', function (socket) {
 
   connectCounter++;
@@ -74,7 +76,11 @@ io.on('connection', function (socket) {
   });
 
   socket.on('message', function (buffer) {
-    var base64 = new Buffer(buffer).toString('base64');
+    base64Buffer += new Buffer(buffer).toString('base64');
+  });
+
+  socket.on('stop', function () {
+    var request = { audio: { content:  base64Buffer }, config: config };
 
     client
       .recognize(request)
@@ -85,13 +91,13 @@ io.on('connection', function (socket) {
           .map(result => result.alternatives[0].transcript)
           .join('\n');
 
-        io.emit('message', buffer);
+        io.emit('message', transcription);
       })
       .catch(err => {
         console.error('ERROR:', err);
       });
-  });
-  socket.on('stop', function () {
+    
+    base64Buffer = "";
     console.log('socket:stop ' + Date.now());
   });
 });
