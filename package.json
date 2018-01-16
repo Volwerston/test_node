@@ -13,6 +13,9 @@
     "@google-cloud/speech": "^1.0.0",
     "ejs": "^2.5.7",
     "express": "^4.16.2",
+    "fs": "0.0.1-security",
+    "google-auth-library": "^1.0.0",
+    "googleapis": "^24.0.0",
     "socket.io": "^2.0.4"
   }
 }
