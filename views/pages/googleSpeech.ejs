@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font: 13px Helvetica, Arial; background: rgba(225, 255, 142, 0.979)}
+      div#output { padding: 50px; font-size: 40px; }
+      div#info { height: 42px; color: white; position: fixed; top: 0; width: 100%; background: #000; font-size: 34px;}
+      div#info span { font-size:20px; } 
+      div#input { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
+      div#input input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
+      div#input button { width: 9%; background: rgb(255, 253, 130); border: none; padding: 10px; }
+    </style>
+  </head>
+  <body>
+    <div id="info">Chat&nbsp;&nbsp;<span></span></div>
+    <div id="output"></div>
+    <div id="input">
+        <input autocomplete="off" placeholder="Type your message" /><button>Send</button>
+    </div>
+    <audio>
+        <source src="stairs.mp3"></source>
+    </audio>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/annyang/2.6.0/annyang.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+    <script>
+      var socket = io();
+
+      var audio = document.getElementsByTagName("audio")[0];
+
+      if (annyang) {
+        var commands = {
+          '*msg': function(msg) 
+          { 
+            socket.emit('message', msg);
+          }
+        };
+        annyang.addCommands(commands);
+        annyang.setLanguage('uk-UA');
+        annyang.start();
+      }
+
+      socket.on('message', function(msg){
+        $('div#output').html($('div#output').html() + '- ' + msg + '<br/>');
+        $(window).scrollTop($(document).height());
+      });
+
+      socket.on('connections', function(count){
+        $('div#info span').html('connections: ' + count);
+        audio.play();
+      });
+
+      $('div#input button').click(function(){
+        var text = $('div#input input').val();
+        if(text.length > 0)
+        {
+          socket.emit('message', text);
+          $('div#input input').val('');
+        }
+      });
+      $('div#input input').keyup(function(e){
+        if(e.keyCode == 13) $('#input button').trigger("click");
+      });
+    </script>
+  </body>
+</html>

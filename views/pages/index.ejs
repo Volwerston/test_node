@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h1>Microphone Test App</h1>
+
+<button id="start" type="button">Start</button>
+<button id="stop" type="button">Stop</button>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    var socket = io();
+
+	var startBtn = document.querySelector('button#start');
+	var stopBtn = document.querySelector('button#stop');	
+
+    var recording = false;
+    stopBtn.onclick = function() {
+        recording = false;
+        socket.emit('stop');
+    }
+    startBtn.onclick = function() {
+        recording = true;
+    }
+
+    navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(initializeRecorder);
+
+    function initializeRecorder(stream) {
+        var audioContext = window.AudioContext || window.webkitAudioContext;
+        var context = new audioContext();
+        var audioInput = context.createMediaStreamSource(stream);
+
+        var bufferSize = 16384; //256, 512, 1024, 2048, 4096, 8192, 16384
+        var recorder = context.createScriptProcessor(bufferSize, 1, 1);
+        recorder.onaudioprocess = function(e) 
+        {
+            if(!recording) return;
+            console.log ('recording ' + Date.now());
+
+            var inputData = e.inputBuffer.getChannelData(0);
+            //var outputData = e.outputBuffer.getChannelData(0);
+            socket.emit('message', convertoFloat32ToInt16(inputData));
+
+            // for (var sample = 0; sample < e.inputBuffer.length; sample++) {
+		    //   outputData[sample] = inputData[sample];    
+		    // }
+        };
+
+        audioInput.connect(recorder);
+        recorder.connect(context.destination);
+    }
+
+    function convertoFloat32ToInt16(buffer) {
+        var l = buffer.length;
+        var buf = new Int16Array(l)
+
+        while (l--) {
+            buf[l] = buffer[l]*0xFFFF;
+        }
+        return buf.buffer
+    }
+</script>
+</body>
