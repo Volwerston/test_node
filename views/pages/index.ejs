@@ -38,7 +38,7 @@
 
             var inputData = e.inputBuffer.getChannelData(0);
             //var outputData = e.outputBuffer.getChannelData(0);
-            socket.emit('message', convertoFloat32ToInt16(inputData));
+            socket.emit('voice', convertoFloat32ToInt16(inputData));
 
             // for (var sample = 0; sample < e.inputBuffer.length; sample++) {
 		    //   outputData[sample] = inputData[sample];    
