@@ -86,6 +86,8 @@
     var stopBtn = document.querySelector('button#stop');
     var audio = document.getElementsByTagName("audio")[0];
 
+    var colors = [];
+
     var recording = false;
     stopBtn.onclick = function () {
       recording = false;
@@ -145,7 +147,7 @@
     // }
 
     socket.on('message', function (msg) {
-      $('div#output').html($('div#output').html() + '- ' + msg + '<br/>');
+      $('div#output').html($('div#output').html() + '<h2 style="color: rgb(' + colors[msg.guid][0] + ',' + colors[msg.guid][1] + ',' + colors[msg.guid][2] + ')">- ' + msg.text + '</h2>');
       $(window).scrollTop($(document).height());
     });
 
@@ -161,17 +163,28 @@
       }
     });
 
+    socket.on('colors', function(serverColors){
+      colors = serverColors;
+    });
 
     $('div#input button').click(function () {
       var text = $('div#input input').val();
       if (text.length > 0) {
-        socket.emit('message', text);
+        socket.emit('message', { text: text, guid: userGuid });
         $('div#input input').val('');
       }
     });
 
     $('div#input input').keyup(function (e) {
       if (e.keyCode == 13) $('#input button').trigger("click");
+    });
+
+    $(window).on("unload", function(){
+       socket.emit('leave', userGuid);
+    });
+
+    $(window).on('beforeunload', function(){
+      socket.emit('leave', userGuid);
     });
   </script>
 </body>
