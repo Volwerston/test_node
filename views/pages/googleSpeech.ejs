@@ -1,67 +1,172 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font: 13px Helvetica, Arial; background: rgba(225, 255, 142, 0.979)}
-      div#output { padding: 50px; font-size: 40px; }
-      div#info { height: 42px; color: white; position: fixed; top: 0; width: 100%; background: #000; font-size: 34px;}
-      div#info span { font-size:20px; } 
-      div#input { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
-      div#input input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
-      div#input button { width: 9%; background: rgb(255, 253, 130); border: none; padding: 10px; }
-    </style>
-  </head>
-  <body>
-    <div id="info">Chat&nbsp;&nbsp;<span></span></div>
-    <div id="output"></div>
-    <div id="input">
-        <input autocomplete="off" placeholder="Type your message" /><button>Send</button>
-    </div>
-    <audio>
-        <source src="stairs.mp3"></source>
-    </audio>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/annyang/2.6.0/annyang.min.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
-    <script>
-      var socket = io();
 
-      var audio = document.getElementsByTagName("audio")[0];
+<head>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-      if (annyang) {
-        var commands = {
-          '*msg': function(msg) 
-          { 
-            socket.emit('message', msg);
-          }
-        };
-        annyang.addCommands(commands);
-        annyang.setLanguage('uk-UA');
-        annyang.start();
+    body {
+      font: 13px Helvetica, Arial;
+      background: rgba(225, 255, 142, 0.979) !important
+    }
+
+    div#output {
+      padding: 50px;
+      font-size: 40px;
+    }
+
+    div#info {
+      height: 42px;
+      color: white;
+      position: fixed;
+      top: 0;
+      width: 100%;
+      background: #000;
+      font-size: 34px;
+    }
+
+    div#info span {
+      font-size: 20px;
+    }
+
+    div#input {
+      background: #000;
+      padding: 3px;
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+    }
+
+    div#input input {
+      border: 0;
+      padding: 10px;
+      width: 100%;
+    }
+
+    div#input button {
+      width: 100%;
+      background: rgb(255, 253, 130);
+      border: 2px solid black;
+      padding: 10px;
+      margin: 0;
+    }
+  </style>
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+    crossorigin="anonymous">
+</head>
+
+<body>
+  <div id="info">Chat&nbsp;&nbsp;
+    <span></span>
+  </div>
+  <div id="output"></div>
+  <div id="input" class="row">
+    <input autocomplete="off" class="col-sm-6" placeholder="Type your message" />
+    <button id="start" class="col-sm-2" style="border-left: 4px solid black">Start</button>
+    <button id="stop" class="col-sm-2">Stop</button>
+    <button class="col-sm-2">Send</button>
+  </div>
+  <audio>
+    <source src="stairs.mp3"></source>
+  </audio>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/annyang/2.6.0/annyang.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+    crossorigin="anonymous"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+    crossorigin="anonymous"></script>
+  <script>
+    var socket = io();
+
+    var startBtn = document.querySelector('button#start');
+    var stopBtn = document.querySelector('button#stop');
+    var audio = document.getElementsByTagName("audio")[0];
+
+    var recording = false;
+    stopBtn.onclick = function () {
+      recording = false;
+      socket.emit('stop');
+    }
+    startBtn.onclick = function () {
+      recording = true;
+    }
+
+    navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(initializeRecorder);
+
+    function initializeRecorder(stream) {
+      var audioContext = window.AudioContext || window.webkitAudioContext;
+      var context = new audioContext();
+      var audioInput = context.createMediaStreamSource(stream);
+
+      var bufferSize = 16384; //256, 512, 1024, 2048, 4096, 8192, 16384
+      var recorder = context.createScriptProcessor(bufferSize, 1, 1);
+      recorder.onaudioprocess = function (e) {
+        if (!recording) return;
+        console.log('recording ' + Date.now());
+
+        var inputData = e.inputBuffer.getChannelData(0);
+        //var outputData = e.outputBuffer.getChannelData(0);
+        socket.emit('voice', convertoFloat32ToInt16(inputData));
+
+        // for (var sample = 0; sample < e.inputBuffer.length; sample++) {
+        //   outputData[sample] = inputData[sample];    
+        // }
+      };
+
+      audioInput.connect(recorder);
+      recorder.connect(context.destination);
+    }
+
+    function convertoFloat32ToInt16(buffer) {
+      var l = buffer.length;
+      var buf = new Int16Array(l)
+
+      while (l--) {
+        buf[l] = buffer[l] * 0xFFFF;
       }
+      return buf.buffer;
+    }
 
-      socket.on('message', function(msg){
-        $('div#output').html($('div#output').html() + '- ' + msg + '<br/>');
-        $(window).scrollTop($(document).height());
-      });
 
-      socket.on('connections', function(count){
-        $('div#info span').html('connections: ' + count);
-        audio.play();
-      });
+    // if (annyang) {
+    //   var commands = {
+    //     '*msg': function(msg) 
+    //     { 
+    //       socket.emit('message', msg);
+    //     }
+    //   };
+    //   annyang.addCommands(commands);
+    //   annyang.setLanguage('uk-UA');
+    //   annyang.start();
+    // }
 
-      $('div#input button').click(function(){
-        var text = $('div#input input').val();
-        if(text.length > 0)
-        {
-          socket.emit('message', text);
-          $('div#input input').val('');
-        }
-      });
-      $('div#input input').keyup(function(e){
-        if(e.keyCode == 13) $('#input button').trigger("click");
-      });
-    </script>
-  </body>
+    socket.on('message', function (msg) {
+      $('div#output').html($('div#output').html() + '- ' + msg + '<br/>');
+      $(window).scrollTop($(document).height());
+    });
+
+    socket.on('connections', function (count) {
+      $('div#info span').html('connections: ' + count);
+      audio.play();
+    });
+
+
+    $('div#input button').click(function () {
+      var text = $('div#input input').val();
+      if (text.length > 0) {
+        socket.emit('message', text);
+        $('div#input input').val('');
+      }
+    });
+
+    $('div#input input').keyup(function (e) {
+      if (e.keyCode == 13) $('#input button').trigger("click");
+    });
+  </script>
+</body>
+
 </html>
