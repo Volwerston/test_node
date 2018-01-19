@@ -7,6 +7,10 @@ const fs = require('fs');
 const google = require('googleapis');
 var guid = require("guid");
 
+
+/* GOOGLE SPEECH API CONFIG */
+const projectId = 'static-retina-192310';
+
 const client = new speech.SpeechClient();
 
 const config = {
@@ -14,9 +18,6 @@ const config = {
   sampleRateHertz: 45000,
   languageCode: 'uk-UA',
 };
-
-/* GOOGLE SPEECH API CONFIG */
-const projectId = 'static-retina-192310';
 
 // // The audio file's encoding, sample rate in hertz, and BCP-47 language code
 
@@ -148,7 +149,7 @@ io.on('connection', function (socket) {
           .map(result => result.alternatives[0].transcript)
           .join('\n');
 
-        io.emit('message', transcription);
+        io.emit('message', { text:transcription, guid: guid });
         delete bufferPool[guid];
       })
       .catch(err => {
