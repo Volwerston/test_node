@@ -81,7 +81,7 @@
     crossorigin="anonymous"></script>
   <script>
     var socket = io();
-
+    var userGuid = "";
     var startBtn = document.querySelector('button#start');
     var stopBtn = document.querySelector('button#stop');
     var audio = document.getElementsByTagName("audio")[0];
@@ -89,7 +89,7 @@
     var recording = false;
     stopBtn.onclick = function () {
       recording = false;
-      socket.emit('stop');
+      socket.emit('endMsg', userGuid);
     }
     startBtn.onclick = function () {
       recording = true;
@@ -110,7 +110,7 @@
 
         var inputData = e.inputBuffer.getChannelData(0);
         //var outputData = e.outputBuffer.getChannelData(0);
-        socket.emit('voice', convertoFloat32ToInt16(inputData));
+        socket.emit('voice', { data: convertoFloat32ToInt16(inputData), guid: userGuid });
 
         // for (var sample = 0; sample < e.inputBuffer.length; sample++) {
         //   outputData[sample] = inputData[sample];    
@@ -152,6 +152,13 @@
     socket.on('connections', function (count) {
       $('div#info span').html('connections: ' + count);
       audio.play();
+    });
+    
+    socket.on('guid', function(guid){
+      if(userGuid.length === 0){
+       userGuid = guid;
+       alert("GUID: " + guid);
+      }
     });
 
 

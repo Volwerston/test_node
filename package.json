@@ -16,6 +16,7 @@
     "fs": "0.0.1-security",
     "google-auth-library": "^1.0.0",
     "googleapis": "^24.0.0",
+    "guid": "0.0.12",
     "socket.io": "^2.0.4"
   }
 }

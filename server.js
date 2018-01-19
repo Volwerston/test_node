@@ -5,6 +5,7 @@ const io = require('socket.io')(http);
 const speech = require('@google-cloud/speech');
 const fs = require('fs');
 const google = require('googleapis');
+var guid = require("guid");
 
 const client = new speech.SpeechClient();
 
@@ -68,12 +69,14 @@ server.use(express.static('audio'));
 
 /* WEBSOCKET CONFIG */
 var connectCounter = 0;
-var dataBuffer = null;
+var bufferPool = [];
 
 io.on('connection', function (socket) {
 
   connectCounter++;
   io.emit('connections', connectCounter);
+
+  io.emit('guid', guid.create().value);
 
   socket.on('disconnect', function () {
     connectCounter--;
@@ -84,14 +87,22 @@ io.on('connection', function (socket) {
     io.emit('message', msg);
   });
 
-  socket.on('voice', function (buffer) {
-    dataBuffer = (dataBuffer === null) ? new Buffer(buffer) : Buffer.concat([dataBuffer, new Buffer(buffer)]);
+  socket.on('voice', function (msg) {
+    if(bufferPool[msg.guid] === undefined){
+        bufferPool[msg.guid] = new Buffer(msg.data);
+    }
+    else{
+        bufferPool[msg.guid] = Buffer.concat([bufferPool[msg.guid], new Buffer(msg.data)]);
+    }
+    //dataBuffer = (dataBuffer === null) ? new Buffer(buffer) : Buffer.concat([dataBuffer, new Buffer(buffer)]);
   });
 
-  socket.on('stop', function () {
+  socket.on('endMsg', function (guid) {
 
-    let base64Buffer = dataBuffer.toString('base64');
+    let base64Buffer = (bufferPool[guid] === undefined ? "" : bufferPool[guid]).toString('base64');
 
+    if(base64Buffer.length === 0) return;
+    
     var request = { audio: { content: base64Buffer }, config: config };
 
     client
@@ -103,7 +114,7 @@ io.on('connection', function (socket) {
           .join('\n');
 
         io.emit('message', transcription);
-        dataBuffer = null;
+        delete bufferPool[guid];
       })
       .catch(err => {
         console.error('ERROR:', err);
